@@ -7,11 +7,7 @@ on:
   # Run every 6 hours
   schedule:
     - cron:  '0 2/6 * * *'
-  ### FOR TESTING PURPOSES
-  # pull_request:
-  #  types:
-  #    - "labeled"
-  ###
+  pull_request: {}
 
 env:
   clusterName: ${{ github.repository_owner }}-${{ github.event.repository.name }}-${{ github.run_id }}
@@ -20,13 +16,6 @@ env:
 
 jobs:
   installation-and-connectivity:
-    if: |
-      (github.event.issue.pull_request && (
-        startsWith(github.event.comment.body, 'ci-gke') ||
-        startsWith(github.event.comment.body, 'test-me-please')
-      )) ||
-      (github.event_name == 'schedule' && github.repository == 'cilium/cilium') ||
-      github.event.label.name == 'ci-run/gke'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:

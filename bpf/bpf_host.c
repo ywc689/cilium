@@ -249,6 +249,12 @@ skip_host_firewall:
 			return DROP_INVALID;
 	}
 
+#if !defined(ENABLE_NODEPORT) && defined(NO_REDIRECT) && !defined(ENABLE_REDIRECT_FAST)
+	/* See comment in handle_ipv4() */
+	if (!from_host)
+		return CTX_ACT_OK;
+#endif /* !ENABLE_NODEPORT && NO_REDIRECT && !ENABLE_REDIRECT_FAST */
+
 	/* Lookup IPv4 address in list of local endpoints */
 	ep = lookup_ip6_endpoint(ip6);
 	if (ep) {
@@ -525,6 +531,23 @@ handle_ipv4(struct __ctx_buff *ctx, __u32 secctx,
 		if (!revalidate_data(ctx, &data, &data_end, &ip4))
 			return DROP_INVALID;
 	}
+
+#if !defined(ENABLE_NODEPORT) && defined(NO_REDIRECT) && !defined(ENABLE_REDIRECT_FAST)
+	/* If bpf_host is attached to a physical device, the ingress traffic
+	 * destined to a pod will be redirected to the the pod's lxc device
+	 * using bpf_redirect(). This causes new connections coming from a
+	 * remote node to bypass the nf_conntrack table.
+	 *
+	 * When Iptables masquerading is enabled, traffic leaving the pod after
+	 * a connection's been established will be (incorrectly) masqueraded, as
+	 * the connection is not tracked by netfilter.
+	 *
+	 * In this case, we must skip bpf_redirect and let the traffic go
+	 * through the stack, to allow nf_conntrack to track it.
+	 */
+	if (!from_host)
+		return CTX_ACT_OK;
+#endif /* !ENABLE_NODEPORT && NO_REDIRECT && !ENABLE_REDIRECT_FAST */
 
 	/* Lookup IPv4 address in list of local endpoints and host IPs */
 	ep = lookup_ip4_endpoint(ip4);

@@ -1573,7 +1573,10 @@ Secondary Interface %s :: IPv4: (%s, %s), IPv6: (%s, %s)`, helpers.DualStackSupp
 				err = kubectl.Get(helpers.DefaultNamespace, fmt.Sprintf("service %s", svcName)).Unmarshal(&data)
 				ExpectWithOffset(1, err).Should(BeNil(), "Cannot retrieve service %s", svcName)
 
-				httpURL := getHTTPLink(nodeIP, data.Spec.Ports[0].NodePort)
+				httpURL := getHTTPLink(data.Spec.ClusterIP, data.Spec.Ports[0].Port)
+				if fromOutside {
+					httpURL = getHTTPLink(nodeIP, data.Spec.Ports[0].NodePort)
+				}
 				cmd := helpers.CurlFail(httpURL) + " | grep 'Hostname:' " // pod name is in the hostname
 
 				if fromOutside {
@@ -2054,6 +2057,22 @@ Secondary Interface %s :: IPv4: (%s, %s), IPv6: (%s, %s)`, helpers.DualStackSupp
 				ciliumDelService(31080)
 				DeployCiliumAndDNS(kubectl, ciliumFilename)
 			})
+		})
+
+		// SA needs 4.19. However, on the 4.19 job we run KPR. So to test SA on
+		// bpf_lxc with kube-proxy we need to disable KRP.
+		SkipContextIf(helpers.DoesNotRunOn419Kernel, "Tests ClusterIP with sessionAffinity", func() {
+			BeforeAll(func() {
+				DeployCiliumOptionsAndDNS(kubectl, ciliumFilename, map[string]string{
+					"kubeProxyReplacement": "disabled",
+				})
+			})
+
+			AfterAll(func() {
+				DeployCiliumAndDNS(kubectl, ciliumFilename)
+			})
+
+			testSessionAffinity(false, true)
 		})
 
 		SkipContextIf(helpers.RunsWithKubeProxyReplacement, "Tests NodePort (kube-proxy)", func() {

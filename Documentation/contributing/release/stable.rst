@@ -160,6 +160,13 @@ Reference steps for the template
 
       git checkout -b pr/bump-readme-vX.Y.Z origin/master
       contrib/release/bump-readme.sh
+   
+   When the release is the latest stable release, bump the version in the
+   ``stable.txt`` file.
+
+   ::
+
+      echo "vX.Y.Z" > stable.txt
       # (Commit changes & submit PR)
 
 #. Bump the version of Cilium used in the Cilium upgrade tests to use the new release

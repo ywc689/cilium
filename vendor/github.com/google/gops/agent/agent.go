@@ -107,7 +107,7 @@ func Listen(opts Options) error {
 	}
 	var lc net.ListenConfig
 	if opts.ReuseSocketAddrAndPort {
-		lc.Control = setsockoptReuseAddrAndPort
+		lc.Control = setReuseAddrAndPortSockopts
 	}
 	listener, err = lc.Listen(context.Background(), "tcp", addr)
 	if err != nil {
@@ -120,14 +120,14 @@ func Listen(opts Options) error {
 		return err
 	}
 
-	go listen()
+	go listen(listener)
 	return nil
 }
 
-func listen() {
+func listen(l net.Listener) {
 	buf := make([]byte, 1)
 	for {
-		fd, err := listener.Accept()
+		fd, err := l.Accept()
 		if err != nil {
 			// No great way to check for this, see https://golang.org/issues/4373.
 			if !strings.Contains(err.Error(), "use of closed network connection") {
